@@ -46,7 +46,10 @@ public class SensorPlot extends AppCompatActivity {
     private LineChart mChart;
 
     private static final String TAG = "SensorPlot";
-    private static final String REMOTE_SERVER = "http://10.0.2.2:8000/";
+    //private static final String REMOTE_SERVER = "http://10.0.2.2:8000/";
+    private String remote_server_ip;
+    private static final String PROTO = "http://";
+    private static final String PORT = "8000";
     private String csvfile;
     public static final int SIZE = 1569;
     private Integer[] freq;
@@ -94,8 +97,11 @@ public class SensorPlot extends AppCompatActivity {
                 Log.i(TAG, "Message from Pusher: " + data);
                 Gson gson = new Gson();
                 Filename filename = gson.fromJson(data, Filename.class);
-                Log.i(TAG, "Message parsed; filename: " + filename.getMessage());
-                csvfile = REMOTE_SERVER + filename.getMessage();
+                remote_server_ip = filename.getIp();
+                Log.i(TAG, "Message received from IP: " + remote_server_ip + "; Message parsed; filename: " + filename.getMessage());
+                csvfile = PROTO + remote_server_ip + ":" + PORT + "/" + filename.getMessage();
+                // test
+                //csvfile = "http://10.0.2.2:8000/" + filename.getMessage();
                 //csvfile = "https://jkim796.github.io/test.csv";
                 Log.i(TAG, "Latest CSV filename obtained: " + csvfile);
                 DownloadFilesTask downloadFilesTask = new DownloadFilesTask();
@@ -201,9 +207,14 @@ public class SensorPlot extends AppCompatActivity {
 
     private class Filename {
         private String message;
+        private String ip;
 
         public String getMessage() {
             return message;
+        }
+
+        public String getIp() {
+            return ip;
         }
     }
 
