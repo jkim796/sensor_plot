@@ -14,6 +14,16 @@ import com.androidplot.xy.LineAndPointFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.LimitLine;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+import com.github.mikephil.charting.utils.ColorTemplate;
 import com.google.gson.Gson;
 import com.pusher.client.Pusher;
 import com.pusher.client.PusherOptions;
@@ -33,18 +43,21 @@ import java.util.List;
 import java.util.Random;
 
 public class SensorPlot extends AppCompatActivity {
+    private LineChart mChart;
+
     private static final String TAG = "SensorPlot";
     private static final String REMOTE_SERVER = "http://10.0.2.2:8000/";
     private String csvfile;
     public static final int SIZE = 1569;
     private Integer[] freq;
     private Float[] phase;
+    private Pusher pusher;
 
-    //private Float[] minfreq;
-    //private Long[] time;
+    private Integer[] freqency_yaxis;
+    private Long[] time;
 
     private XYPlot phase_dip_plot;
-    private XYPlot time_plot;
+    //private XYPlot time_plot;
 
     private Redrawer redrawer;
     public static int[] colors = {Color.RED, Color.GREEN, Color.BLUE, Color.CYAN, Color.GRAY, Color.MAGENTA, Color.LTGRAY, Color.YELLOW};
@@ -54,19 +67,26 @@ public class SensorPlot extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_plot);
 
+        mChart = (LineChart) findViewById(R.id.chart);
+        setupChart();
+        setupAxes();
+        setupData();
+        setLegend();
+
         // SensorPlot setup
         phase_dip_plot = (XYPlot) findViewById(R.id.phase_dip_plot);
         phase_dip_plot.setDomainBoundaries(10000000, 199998750, BoundaryMode.FIXED );
         phase_dip_plot.setRangeBoundaries(148, 180, BoundaryMode.FIXED);
 
-        time_plot = (XYPlot) findViewById(R.id.time_plot);
-        //time_plot.setD
-        //time_plot.setRangeBoundaries(10000000, 200000000, BoundaryMode.FIXED);
+//        time_plot = (XYPlot) findViewById(R.id.time_plot);
+//        //time_plot.setD
+//        time_plot.setRangeBoundaries(199998750 - 100, 199998750 + 100, BoundaryMode.FIXED);
+//        time_plot.setDomainLowerBoundary(System.nanoTime(), BoundaryMode.AUTO);
 
         // Set up pusher watcher - this will get the new csv filename generated in the server
         PusherOptions options = new PusherOptions();
         options.setCluster("us2");
-        Pusher pusher = new Pusher("36fc8a3649c22f1c1723", options);
+        pusher = new Pusher("36fc8a3649c22f1c1723", options);
         Channel channel = pusher.subscribe("my-channel");
         channel.bind("my-event", new SubscriptionEventListener() {
             @Override
@@ -122,8 +142,8 @@ public class SensorPlot extends AppCompatActivity {
         //phase_dip_plot.redraw();
 
         // Time Domain SensorPlot
-        //min = new Float[1];
-        //time = new Long[1];
+        freqency_yaxis = new Integer[1];
+        time = new Long[1];
         Float minphase = phase[1];
         int index = 1;
         long start = System.nanoTime();
@@ -136,19 +156,21 @@ public class SensorPlot extends AppCompatActivity {
         }
 
         Integer minfreq = freq[index];
-        long elapsed = System.nanoTime() - start;
-        Log.i(TAG, "Min Frequency: " + minfreq + " at index " + index + " with min phase: " + minphase + ", elapsed: " + elapsed);
-        //minphase[0] = min;
-        //time[0] = Calendar.getInstance().getTimeInMillis();
-        Log.i(TAG, "Time: " + Calendar.getInstance().getTimeInMillis() + "; currentTimeMillis: " + System.currentTimeMillis());
-        XYSeries series2 = new SimpleXYSeries(Arrays.asList(new Integer[]{minfreq}), Arrays.asList(new Long[]{System.currentTimeMillis()}),"");
-        LineAndPointFormatter series2Format = new LineAndPointFormatter(null, color, null, null);
-        series2Format.getVertexPaint().setStrokeWidth(PixelUtils.dpToPix(10));
-        time_plot.addSeries(series2, series2Format);
-
+//        long elapsed = System.nanoTime() - start;
+//        Log.i(TAG, "Min Frequency: " + minfreq + " at index " + index + " with min phase: " + minphase + ", elapsed: " + elapsed);
+//        freqency_yaxis[0] = minfreq;
+//        time[0] = System.nanoTime();
+//        //minphase[0] = min;
+//        //time[0] = Calendar.getInstance().getTimeInMillis();
+//        Log.i(TAG, "Time: " + time[0] + "; currentTimeMillis: " + System.currentTimeMillis());
+//        XYSeries series2 = new SimpleXYSeries(Arrays.asList(freqency_yaxis), Arrays.asList(time),"");
+//        LineAndPointFormatter series2Format = new LineAndPointFormatter(null, color, null, null);
+//        series2Format.getVertexPaint().setStrokeWidth(PixelUtils.dpToPix(15));
+//        time_plot.addSeries(series2, series2Format);
 
         phase_dip_plot.redraw();
-        time_plot.redraw();
+//        time_plot.redraw();
+        addEntry(minfreq);
     }
 
     private List<String[]> downloadRemoteTextFileContent() {
@@ -183,5 +205,111 @@ public class SensorPlot extends AppCompatActivity {
         public String getMessage() {
             return message;
         }
+    }
+
+    private void setupChart() {
+        // disable description text
+        mChart.getDescription().setEnabled(false);
+        // enable touch gestures
+        mChart.setTouchEnabled(true);
+        // if disabled, scaling can be done on x- and y-axis separately
+        mChart.setPinchZoom(true);
+        // enable scaling
+        mChart.setScaleEnabled(true);
+        mChart.setDrawGridBackground(false);
+        // set an alternative background color
+        mChart.setBackgroundColor(Color.DKGRAY);
+    }
+
+    private void setupAxes() {
+        XAxis xl = mChart.getXAxis();
+        xl.setTextColor(Color.WHITE);
+        xl.setDrawGridLines(false);
+        xl.setAvoidFirstLastClipping(true);
+        xl.setEnabled(true);
+
+        YAxis leftAxis = mChart.getAxisLeft();
+        leftAxis.setTextColor(Color.WHITE);
+        leftAxis.setAxisMaximum(199998750 + 100);
+        leftAxis.setAxisMinimum(199998750 - 100);
+        leftAxis.setDrawGridLines(true);
+
+        YAxis rightAxis = mChart.getAxisRight();
+        rightAxis.setEnabled(false);
+
+        // Add a limit line
+        LimitLine ll = new LimitLine(200000000, "Upper Limit");
+        ll.setLineWidth(2f);
+        ll.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_TOP);
+        ll.setTextSize(10f);
+        ll.setTextColor(Color.WHITE);
+        // reset all limit lines to avoid overlapping lines
+        leftAxis.removeAllLimitLines();
+        leftAxis.addLimitLine(ll);
+        // limit lines are drawn behind data (and not on top)
+        leftAxis.setDrawLimitLinesBehindData(true);
+    }
+
+    private void setupData() {
+        LineData data = new LineData();
+        data.setValueTextColor(Color.WHITE);
+
+        // add empty data
+        mChart.setData(data);
+    }
+
+    private void setLegend() {
+        // get the legend (only possible after setting data)
+        Legend l = mChart.getLegend();
+
+        // modify the legend ...
+        l.setForm(Legend.LegendForm.CIRCLE);
+        l.setTextColor(Color.WHITE);
+    }
+
+    private LineDataSet createSet() {
+        LineDataSet set = new LineDataSet(null, "Time Domain Data");
+        set.setAxisDependency(YAxis.AxisDependency.LEFT);
+        set.setColors(ColorTemplate.VORDIPLOM_COLORS[0]);
+        set.setCircleColor(Color.WHITE);
+        set.setLineWidth(2f);
+        set.setCircleRadius(4f);
+        set.setValueTextColor(Color.WHITE);
+        set.setValueTextSize(10f);
+        // To show values of each point
+        set.setDrawValues(true);
+
+        return set;
+    }
+
+    private void addEntry(int freq) {
+        LineData data = mChart.getData();
+
+        if (data != null) {
+            ILineDataSet set = data.getDataSetByIndex(0);
+
+            if (set == null) {
+                set = createSet();
+                data.addDataSet(set);
+            }
+
+            data.addEntry(new Entry(set.getEntryCount(), freq), 0);
+
+            // let the chart know it's data has changed
+            data.notifyDataChanged();
+            mChart.notifyDataSetChanged();
+
+            // limit the number of visible entries
+            mChart.setVisibleXRangeMaximum(15);
+
+            // move to the latest entry
+            mChart.moveViewToX(data.getEntryCount());
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        pusher.disconnect();
     }
 }
