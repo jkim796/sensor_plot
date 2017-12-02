@@ -51,7 +51,7 @@ public class SensorPlot extends AppCompatActivity {
     private static final String PROTO = "http://";
     private static final String PORT = "8000";
     private String csvfile;
-    public static final int SIZE = 1569;
+    public static final int SIZE = 3000;
     private Integer[] freq;
     private Float[] phase;
     private Pusher pusher;
@@ -78,8 +78,9 @@ public class SensorPlot extends AppCompatActivity {
 
         // SensorPlot setup
         phase_dip_plot = (XYPlot) findViewById(R.id.phase_dip_plot);
-        phase_dip_plot.setDomainBoundaries(10000000, 199998750, BoundaryMode.FIXED );
-        phase_dip_plot.setRangeBoundaries(148, 180, BoundaryMode.FIXED);
+        //phase_dip_plot.setDomainBoundaries(10000000, 199998750, BoundaryMode.FIXED );
+        //phase_dip_plot.setRangeBoundaries(148, 180, BoundaryMode.FIXED);
+        phase_dip_plot.getLegend().setVisible(false);
 
 //        time_plot = (XYPlot) findViewById(R.id.time_plot);
 //        //time_plot.setD
@@ -100,6 +101,8 @@ public class SensorPlot extends AppCompatActivity {
                 remote_server_ip = filename.getIp();
                 Log.i(TAG, "Message received from IP: " + remote_server_ip + "; Message parsed; filename: " + filename.getMessage());
                 csvfile = PROTO + remote_server_ip + ":" + PORT + "/" + filename.getMessage();
+                //csvfile = "http://143.215.98.171:8000/" + filename.getMessage();
+                //csvfile = "http://143.215.105.217:8000/VNA_171201_070628.csv";
                 // test
                 //csvfile = "http://10.0.2.2:8000/" + filename.getMessage();
                 //csvfile = "https://jkim796.github.io/test.csv";
@@ -133,7 +136,7 @@ public class SensorPlot extends AppCompatActivity {
         for (int i = 1; i < result.size(); i++){
             String [] row = result.get(i);
             freq[i] = Integer.parseInt(row[0]);
-            phase[i] = Float.parseFloat(row[2]);
+            phase[i] = Float.parseFloat(row[7]);
         }
         XYSeries series1 = new SimpleXYSeries(
                 Arrays.asList(freq), Arrays.asList(phase), "PhaseDip"
@@ -155,13 +158,15 @@ public class SensorPlot extends AppCompatActivity {
         long start = System.nanoTime();
 
         for (int i = 2; i < SIZE; i++) {
-            if (phase[i] < minphase) {
+            Log.i(TAG, "phase[" + i + "] = " + phase[i]);
+            if (phase[i] != null && phase[i] < minphase) {
                 minphase = phase[i];
                 index = i;
             }
         }
 
         Integer minfreq = freq[index];
+        Log.i(TAG, "minfreq = " + minfreq);
 //        long elapsed = System.nanoTime() - start;
 //        Log.i(TAG, "Min Frequency: " + minfreq + " at index " + index + " with min phase: " + minphase + ", elapsed: " + elapsed);
 //        freqency_yaxis[0] = minfreq;
@@ -241,8 +246,8 @@ public class SensorPlot extends AppCompatActivity {
 
         YAxis leftAxis = mChart.getAxisLeft();
         leftAxis.setTextColor(Color.WHITE);
-        leftAxis.setAxisMaximum(199998750 + 100);
-        leftAxis.setAxisMinimum(199998750 - 100);
+        //leftAxis.setAxisMaximum(199998750 + 100);
+        //leftAxis.setAxisMinimum(199998750 - 100);
         leftAxis.setDrawGridLines(true);
 
         YAxis rightAxis = mChart.getAxisRight();
